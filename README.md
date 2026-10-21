@@ -46,6 +46,8 @@ PDF、Office、图像转换与数值分析可通过已安装的 Python、Node.js
 
 ## 直接使用桌面版
 
+在 [GitHub Releases](https://github.com/sinpangky/branch-local/releases/latest) 下载当前版本及 SHA256 校验文件。下面的 `release/` 路径指本地构建输出目录，安装包不包含在源码仓库中。
+
 - **免安装版：** 双击 `release/BranchLocal-1.5.1-Portable.exe`。
 - **安装版：** 运行 `release/BranchLocal-1.5.1-x64-Setup.exe`，安装后从开始菜单或桌面快捷方式打开“枝间”。
 - **展开版：** `release/win-unpacked/BranchLocal.exe`；需要保留同目录的其他文件。
@@ -231,6 +233,23 @@ API Key 默认仅保留在应用本次运行的内存中。勾选“记住密钥
 工作区 JSON 和 Markdown 导出不包含应用保存的 API Key 或模型连接设置，导出内容包含对话正文。设置文件不另外创建备份，以免清除密钥后留下旧副本。
 
 ## 开发与打包
+
+### GitHub Actions 与发布
+
+`CI` 在推送 `main`、向 `main` 提交 PR 或手动运行时，分别在 Windows、Apple Silicon Mac 和 Linux 上安装锁定依赖、运行单元测试并构建前端。
+
+`Release` 在推送 `v*` 标签时自动运行，也可从 Actions 页面手动选择已存在的版本标签重试。标签必须与该标签下 `package.json` 的版本一致。三个平台分别完成测试、打包和真实打包应用的桌面启动检查后，汇集 8 个安装包，生成 SHA256 校验文件，上传到草稿 Release，全部上传成功后才公开发布。Linux 的自动化桌面检查使用 Xvfb、临时 keyring 和启用的 Chromium sandbox；不会安装 DEB/RPM 到构建机。
+
+发布新版本时，先同步修改 `package.json` 与 `package-lock.json` 的版本并提交，再推送对应标签，例如：
+
+```powershell
+git tag -a v1.5.1 -m "Release v1.5.1"
+git push origin v1.5.1
+```
+
+工作流只在最终发布任务授予 `contents: write`，使用 GitHub 自动提供的 `GITHUB_TOKEN`，无需另存 PAT。已公开的 Release 不会被自动覆盖；失败留下的草稿可以重试。Windows 未配置发行证书；macOS 沿用 ad hoc 签名，未公证。
+
+### 本地开发
 
 源码开发需要 Node.js 22.13 或更新版本：
 
