@@ -77,7 +77,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y rpm libarchive-tools libnss3 libatk-bridge2.0-0 libgbm1 libasound2 xvfb gnome-keyring dbus-x11
+          sudo apt-get install -y rpm libarchive-tools libnss3 libatk-bridge2.0-0 libgbm1 libasound2 xvfb gnome-keyring libsecret-1-0 libsecret-tools dbus-x11
       - run: npm ci --include=optional
       - run: npm test
       - name: Build packages
@@ -93,8 +93,11 @@ jobs:
           sudo chown root:root release/linux-unpacked/chrome-sandbox
           sudo chmod 4755 release/linux-unpacked/chrome-sandbox
           dbus-run-session -- xvfb-run -a bash -euo pipefail -c '
+            export XDG_CURRENT_DESKTOP=GNOME DESKTOP_SESSION=gnome
             export GNOME_KEYRING_CONTROL
             eval "$(printf "ci-keyring-password" | gnome-keyring-daemon --unlock --components=secrets)"
+            printf "ci-probe" | secret-tool store --label="Branch Local CI" application branch-local-ci
+            test "$(secret-tool lookup application branch-local-ci)" = "ci-probe"
             node scripts/desktop-smoke.mjs release/linux-unpacked/branch-local
           '
       - name: Upload packages
