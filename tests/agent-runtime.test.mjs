@@ -348,7 +348,7 @@ test('service.close waits for an in-flight tool to acknowledge cancellation befo
   assert.equal((await get(service, '/api/health')).status, 503);
 });
 
-test('service.close stops a real approved command before returning and leaves no delayed write', { timeout: 15000 }, async (t) => {
+test('service.close stops a real approved command before returning and leaves no delayed write', { timeout: 30000 }, async (t) => {
   const command = process.platform === 'win32'
     ? "Set-Content -LiteralPath 'started.txt' -Value $PID; Start-Sleep -Seconds 20; Set-Content -LiteralPath 'late.txt' -Value 'must not run'"
     : "echo $$ > started.txt; sleep 20; printf 'must not run' > late.txt";
@@ -356,7 +356,10 @@ test('service.close stops a real approved command before returning and leaves no
   const log = collect(await start(service)); const pending = await log.wait('approval.required');
   assert.equal(pending.preview.sandboxed, false); await approve(service, 'run-1', pending.callId, true); await log.wait('tool.started');
   let pid;
-  for (let attempt = 0; attempt < 100; attempt += 1) {
+  // Cold PowerShell startup on hosted Windows runners can exceed 2.5 seconds.
+  // Observe actual command execution before testing cancellation, within the 20s sleep.
+  const startupDeadline = Date.now() + 10000;
+  while (Date.now() < startupDeadline) {
     try { pid = Number((await readFile(path.join(root, 'started.txt'), 'utf8')).trim()); if (pid) break; } catch {}
     await delay(25);
   }
